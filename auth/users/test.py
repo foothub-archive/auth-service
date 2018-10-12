@@ -105,7 +105,8 @@ class TestUsersApi(APITestCase):
 
     def test_retrieve_403(self):
         User.objects.create_user(**USER_JOAO)
-        response = self.client.get(self.instance_url(USER_JOAO['username']), **self.auth_header, format=self.CONTENT_TYPE)
+        response = self.client.get(
+            self.instance_url(USER_JOAO['username']), **self.auth_header, format=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_retrieve_200(self):
