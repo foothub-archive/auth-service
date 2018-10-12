@@ -4,6 +4,8 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from rest_framework_jwt.settings import api_settings
+
 
 User = get_user_model()
 
@@ -34,7 +36,7 @@ class TestUserManager(TestCase):
         self.assertTrue(user.check_password(USER_VASCO['password']))
 
 
-class TestUserCreation(APITestCase):
+class TestUserCreationApi(APITestCase):
     URL = '/create-user'
     CONTENT_TYPE = 'json'
 
@@ -74,7 +76,39 @@ class TestUserCreation(APITestCase):
         self.assertTrue(user_joao.check_password(USER_JOAO['password']))
 
 
-class TestJwtViews(APITestCase):
-    def setUp(self):
-        self.user_vasco = User.objects.create_user(**USER_VASCO)
+class TestUsersApi(APITestCase):
+    URL = '/users'
+    CONTENT_TYPE = 'json'
 
+    @classmethod
+    def instance_url(cls, username: str):
+        return f'{cls.URL}/{username}'
+
+    def setUp(self):
+        user_vasco = User.objects.create_user(**USER_VASCO)
+
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+
+        payload = jwt_payload_handler(user_vasco)
+        token = jwt_encode_handler(payload)
+
+        self.auth_header = {'HTTP_AUTHORIZATION': f'JWT {token}'}
+
+    def test_list_400(self):
+        response = self.client.get(self.URL, format=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_retrieve_401(self):
+        response = self.client.get(self.instance_url(USER_VASCO['username']), format=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_retrieve_403(self):
+        User.objects.create_user(**USER_JOAO)
+        response = self.client.get(self.instance_url(USER_JOAO['username']), **self.auth_header, format=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_retrieve_200(self):
+        response = self.client.get(
+            self.instance_url(USER_VASCO['username']), **self.auth_header, format=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
