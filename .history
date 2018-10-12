@@ -1,0 +1,12 @@
+python manage.py makemigrations
+python manage.py migrate
+python manage.py showmigrations
+python manage.py diffsettings
+python manage.py runserver
+python manage.py test
+python manage.py dbshell
+python manage.py shell
+flake8 auth
+mypy auth
+coverage run manage.py test -v 2 && coverage html
+pip freeze

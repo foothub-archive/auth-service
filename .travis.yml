@@ -1,0 +1,28 @@
+sudo: required
+language: python
+services:
+  - docker
+python:
+  - "3.6"
+before_script:
+  - docker-compose build
+script:
+  - docker-compose run \
+      -e CODECOV_TOKEN=$CODECOV_TOKEN --rm web bash \
+      -c " \
+        flake8 auth && \
+        mypy auth && \
+        python wait_for_postgres.py && \
+        cd auth && \
+        coverage run python manage.py test v-2 && \
+        codecov html && \
+        codecov \
+      "
+after_script:
+  - docker-compose down
+
+notifications:
+  email: false
+
+cache:
+  pip: true
