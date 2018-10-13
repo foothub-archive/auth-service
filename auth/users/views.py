@@ -1,4 +1,4 @@
-from rest_framework import permissions, mixins, viewsets
+from rest_framework import permissions, mixins, viewsets, response, status
 
 from .models import User
 from .serializers import UserCreationSerializer, UserSerializer
@@ -10,10 +10,7 @@ class CreateUserViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin):
     serializer_class = UserCreationSerializer
 
 
-class UserViewSet(mixins.RetrieveModelMixin,
-                  mixins.UpdateModelMixin,
-                  mixins.DestroyModelMixin,
-                  viewsets.GenericViewSet):
+class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     model_class = User
     serializer_class = UserSerializer
     permission_classes = (IsUser,)
@@ -21,3 +18,6 @@ class UserViewSet(mixins.RetrieveModelMixin,
     lookup_field = 'username'
 
     queryset = model_class.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        return response.Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)

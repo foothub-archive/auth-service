@@ -93,23 +93,45 @@ class TestUsersApi(APITestCase):
         payload = jwt_payload_handler(user_vasco)
         token = jwt_encode_handler(payload)
 
-        self.auth_header = {'HTTP_AUTHORIZATION': f'JWT {token}'}
+        self.kwargs = {
+            'HTTP_AUTHORIZATION': f'JWT {token}',
+            'format': self.CONTENT_TYPE
+        }
 
-    def test_list_400(self):
-        response = self.client.get(self.URL, format=self.CONTENT_TYPE)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        User.objects.create_user(**USER_JOAO)
+
+    def test_list_405(self):
+        response = self.client.get(self.URL, **self.kwargs)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_create_405(self):
+        response = self.client.post(self.instance_url(USER_VASCO['username']), data={}, **self.kwargs)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_update_405(self):
+        response = self.client.put(self.instance_url(USER_VASCO['username']), data={}, **self.kwargs)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_retrieve_401(self):
         response = self.client.get(self.instance_url(USER_VASCO['username']), format=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_retrieve_403(self):
-        User.objects.create_user(**USER_JOAO)
-        response = self.client.get(
-            self.instance_url(USER_JOAO['username']), **self.auth_header, format=self.CONTENT_TYPE)
+        response = self.client.get(self.instance_url(USER_JOAO['username']), **self.kwargs)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_retrieve_200(self):
-        response = self.client.get(
-            self.instance_url(USER_VASCO['username']), **self.auth_header, format=self.CONTENT_TYPE)
+        response = self.client.get(self.instance_url(USER_VASCO['username']), **self.kwargs)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_destroy_401(self):
+        response = self.client.delete(self.instance_url(USER_VASCO['username']), format=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_destroy_403(self):
+        response = self.client.delete(self.instance_url(USER_JOAO['username']), **self.kwargs)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_destroy_204(self):
+        response = self.client.delete(self.instance_url(USER_VASCO['username']), **self.kwargs)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
