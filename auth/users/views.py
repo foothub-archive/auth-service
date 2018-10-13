@@ -19,5 +19,5 @@ class UserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.Destr
 
     queryset = model_class.objects.all()
 
-    def list(self, request, *args, **kwargs):
+    def list(self, request, *args, **kwargs) -> response.Response:
         return response.Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
