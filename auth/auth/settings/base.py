@@ -128,7 +128,8 @@ JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
     'JWT_PRIVATE_KEY': private_key,
     'JWT_PUBLIC_KEY': public_key,
-    'JWT_ALGORITHM': 'RS256'
+    'JWT_ALGORITHM': 'RS256',
+    'JWT_PAYLOAD_HANDLER': 'jwt_utils.handlers.jwt_payload_handler',
 }
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-user-model
