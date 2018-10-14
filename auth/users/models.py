@@ -17,7 +17,7 @@ class UnicodeUsernameValidator(RegexValidator):
 
 @deconstructible
 class BlackListValidator:
-    MESSAGE ='Username not allowed.'
+    MESSAGE = 'Username not allowed.'
     CODE = 'invalid'
 
     def __init__(self, black_list=None):
