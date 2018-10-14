@@ -32,7 +32,7 @@ MIDDLEWARE = [
 ]
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#authentication-backends
-AUTHENTICATION_BACKENDS = ('users.backends.ModelBackend',)
+AUTHENTICATION_BACKENDS = ('users.backends.UsernameEmailModelBackend',)
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#email-backend
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

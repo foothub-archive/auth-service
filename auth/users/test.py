@@ -1,4 +1,6 @@
-from django.contrib.auth import get_user_model
+from unittest.mock import patch
+
+from django.contrib.auth import get_user_model, authenticate
 from django.test import TestCase
 
 from rest_framework import status
@@ -23,6 +25,30 @@ USER_JOAO = {
 }
 
 
+class TestUserBackend(TestCase):
+    def setUp(self):
+        User.objects.create_user(**USER_VASCO)
+        User.objects.create_user(**USER_JOAO)
+
+    def test_no_username_fail(self):
+        self.assertIsNone(authenticate())
+
+    def test_no_user_fail(self):
+        self.assertIsNone(authenticate(username='bad_username'))
+
+    def test_username_authentication_fail(self):
+        self.assertIsNone(authenticate(username=USER_VASCO['username'], password=USER_JOAO['password']))
+
+    def test_username_authentication_success(self):
+        self.assertIsNotNone(authenticate(username=USER_VASCO['username'], password=USER_VASCO['password']))
+
+    def test_email_authentication_fail(self):
+        self.assertIsNone(authenticate(username=USER_VASCO['email'], password=USER_JOAO['password']))
+
+    def test_email_authentication_success(self):
+        self.assertIsNotNone(authenticate(username=USER_VASCO['email'], password=USER_VASCO['password']))
+
+
 class TestUserManager(TestCase):
     def test_create_user_success(self):
         self.assertEqual(User.objects.count(), 0)
@@ -42,6 +68,19 @@ class TestUserCreationApi(APITestCase):
 
     def setUp(self):
         self.user_vasco = User.objects.create_user(**USER_VASCO)
+
+    def test_create_user_400_invalid(self):
+        self.assertEqual(User.objects.count(), 1)
+        bad_user = {
+            'username': 'username@foothub.com',
+            'email': 'email@foothub.com',
+            'password': 'legitpw123',
+        }
+
+        response = self.client.post(self.URL, bad_user, format=self.CONTENT_TYPE)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.count(), 1)
 
     def test_create_user_400_forbidden(self):
         self.assertEqual(User.objects.count(), 1)
