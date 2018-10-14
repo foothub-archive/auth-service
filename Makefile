@@ -44,7 +44,7 @@ test: # run django tests
 	cd auth && python manage.py test -v 2 && cd ..
 
 coverage: # run django tests with coverage
-	cd auth && coverage run manage.py test -v 2 && coveraget html && cd ..
+	cd auth && coverage run manage.py test -v 2 && coverage html && cd ..
 
 tests:
 	$(MAKE) lint

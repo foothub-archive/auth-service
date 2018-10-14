@@ -123,6 +123,10 @@ class TestUsersApi(APITestCase):
     def test_retrieve_200(self):
         response = self.client.get(self.instance_url(USER_VASCO['username']), **self.kwargs)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+        self.assertIn('uuid', response.data)
+        self.assertEqual(response.data['username'], USER_VASCO['username'])
+        self.assertEqual(response.data['email'], USER_VASCO['email'])
 
     def test_destroy_401(self):
         response = self.client.delete(self.instance_url(USER_VASCO['username']), format=self.CONTENT_TYPE)
@@ -133,5 +137,9 @@ class TestUsersApi(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_destroy_204(self):
+        self.assertEqual(User.objects.count(), 2)
+
         response = self.client.delete(self.instance_url(USER_VASCO['username']), **self.kwargs)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertEqual(User.objects.count(), 1)
