@@ -32,7 +32,7 @@ MIDDLEWARE = [
 ]
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#authentication-backends
-AUTHENTICATION_BACKENDS = ('users.backends.ModelBackend',)
+AUTHENTICATION_BACKENDS = ('users.backends.UsernameEmailModelBackend',)
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#email-backend
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -128,7 +128,8 @@ JWT_AUTH = {
     'JWT_ALLOW_REFRESH': True,
     'JWT_PRIVATE_KEY': private_key,
     'JWT_PUBLIC_KEY': public_key,
-    'JWT_ALGORITHM': 'RS256'
+    'JWT_ALGORITHM': 'RS256',
+    'JWT_PAYLOAD_HANDLER': 'jwt_utils.handlers.jwt_payload_handler',
 }
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-user-model

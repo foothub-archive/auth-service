@@ -3,25 +3,29 @@ from django.db import models
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.utils.deconstruct import deconstructible
 
 from .managers import UserManager
 
 
 @deconstructible
+class UnicodeUsernameValidator(RegexValidator):
+    regex = r'^[\w.+-]+$'
+    message = 'Enter a valid username. This value may contain only letters, numbers, and ./+/-/_ characters.'
+    flags = 0
+
+
+@deconstructible
 class BlackListValidator:
-    MESSAGE = 'not allowed.'
+    MESSAGE = 'Username not allowed.'
     CODE = 'invalid'
 
-    def __init__(self, black_list=None, message=None, code=None):
+    def __init__(self, black_list=None):
         self.black_list = black_list if black_list is not None else []
-        self.message = message if message is not None else self.MESSAGE
-        self.code = code if code is not None else self.CODE
 
     def __call__(self, value):
         if value in self.black_list:
-            raise ValidationError(self.message, self.code)
+            raise ValidationError(self.MESSAGE, self.CODE)
 
 
 UUID4HEX_LEN = 32
@@ -37,7 +41,6 @@ class User(AbstractBaseUser):
     REQUIRED_FIELDS = ['email']
 
     BLACKLISTED_USERNAMES = ['me']
-    BLACKLISTED_USERNAMES_VALIDATOR_MESSAGE = 'Username not allowed.'
 
     USERNAME_MAX_LEN = 30
 
@@ -57,7 +60,7 @@ class User(AbstractBaseUser):
     )
 
     username_validator = UnicodeUsernameValidator()
-    blacklist_validator = BlackListValidator(BLACKLISTED_USERNAMES, BLACKLISTED_USERNAMES_VALIDATOR_MESSAGE)
+    blacklist_validator = BlackListValidator(BLACKLISTED_USERNAMES)
     username = models.CharField(
         validators=[username_validator, blacklist_validator],
         max_length=USERNAME_MAX_LEN,
