@@ -8,6 +8,4 @@ WORKDIR /code
 RUN pipenv install --system --dev
 EXPOSE 8000
 
-# Migrates the database, uploads staticfiles, and runs the production server
-CMD python manage.py migrate && \
-    gunicorn --bind 0.0.0.0:8000 --access-logfile - auth.wsgi:application
+CMD cd auth && python manage.py migrate && gunicorn --bind 0.0.0.0:8000 --access-logfile - auth.wsgi:application
