@@ -1,4 +1,5 @@
 import os
+import datetime
 
 from utils.crypto import PemKeyLoader
 
@@ -134,3 +135,7 @@ JWT_AUTH = {
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-user-model
 AUTH_USER_MODEL = 'users.User'
+
+
+# custom
+START_DATETIME = datetime.datetime.now()
