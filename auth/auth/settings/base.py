@@ -30,6 +30,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'utils.middleware.CORSMiddleware',
 ]
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#authentication-backends
