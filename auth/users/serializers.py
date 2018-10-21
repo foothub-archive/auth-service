@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import User
 
 
-class UserCreationSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(min_length=8, write_only=True)
 
     def create(self, validated_data):
@@ -13,13 +13,7 @@ class UserCreationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password')
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('uuid', 'username', 'email')
+        fields = ('uuid', 'username', 'email', 'password')
 
 
 UserJwtPayloadSerializer = UserSerializer
