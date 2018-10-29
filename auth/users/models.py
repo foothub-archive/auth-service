@@ -78,8 +78,7 @@ class User(AbstractBaseUser):
 class PhoneNumber(models.Model):
     NUMBER_MAX_LEN = 16
 
-    phone_regex = RegexValidator(regex='^\+\d{8,15}$',
-                                 message="Phone number format: '+99999999'. Up to 16 digits.")
+    phone_regex = RegexValidator(regex=r'^\+\d{8,15}$', message="Phone number format: '+99999999'. Up to 16 digits.")
     phone_number = models.CharField(
         validators=[phone_regex],
         max_length=NUMBER_MAX_LEN,

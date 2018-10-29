@@ -27,7 +27,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .mypy_cache \
 
 create-keys: ## creates a rsa key pair
-	python create_keys.py
+	cd auth && j-crypto-create-pair && cd ..
 
 create-keys-docker:
 	docker-compose build
