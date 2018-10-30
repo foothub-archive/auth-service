@@ -40,16 +40,25 @@ lint: # check style with flake8
 type-check: ## check types with mypy
 	mypy auth && rm -r .mypy_cache
 
-test: # run django tests
-	cd auth && python manage.py test -v 2 && cd ..
-
-coverage: # run django tests with coverage
+test: # run django tests with coverage
 	cd auth && coverage run manage.py test -v 2 && coverage html && cd ..
 
-tests:
+migrations-check: # checks models consistency
+	cd auth && python manage.py makemigrations --check --dry-run && cd ..
+
+codecov:
+	cd auth && codecov
+
+run-tests:
 	$(MAKE) lint
 	$(MAKE) type-check
+	$(MAKE) migrations-check
 	$(MAKE) test
+
+run-ci:
+	$(MAKE) create-keys
+	$(MAKE) run-tests
+	$(MAKE) codecov
 
 start-dev: # start development containers
 	docker-compose build

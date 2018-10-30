@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth import get_user_model, authenticate
 from django.test import TestCase
 
@@ -60,7 +62,7 @@ class TestUserManager(TestCase):
 
 class TestUsersApi(APITestCase):
     URL = '/users'
-    CONTENT_TYPE = 'json'
+    CONTENT_TYPE = 'application/json'
 
     @classmethod
     def instance_url(cls, username: str):
@@ -75,21 +77,24 @@ class TestUsersApi(APITestCase):
         payload = jwt_payload_handler(user_vasco)
         token = jwt_encode_handler(payload)
 
-        self.kwargs = {
+        self.http_auth = {
             'HTTP_AUTHORIZATION': f'JWT {token}',
-            'format': self.CONTENT_TYPE
         }
 
     def test_list_405(self):
-        response = self.client.get(self.URL, **self.kwargs)
+        response = self.client.get(
+            self.URL, content_type=self.CONTENT_TYPE, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_update_405(self):
-        response = self.client.put(self.instance_url(USER_VASCO['username']), data={}, **self.kwargs)
+        response = self.client.put(
+            self.instance_url(USER_VASCO['username']),
+            data=json.dumps({}), content_type=self.CONTENT_TYPE, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_create_user_403(self):
-        response = self.client.post(self.URL, USER_JOAO, **self.kwargs)
+        response = self.client.post(
+            self.URL, data=json.dumps(USER_JOAO), content_type=self.CONTENT_TYPE, **self.http_auth)
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(User.objects.count(), 1)
@@ -102,7 +107,8 @@ class TestUsersApi(APITestCase):
             'password': 'legitpw123',
         }
 
-        response = self.client.post(self.URL, bad_user, format=self.CONTENT_TYPE)
+        response = self.client.post(
+            self.URL, data=json.dumps(bad_user), content_type=self.CONTENT_TYPE)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
@@ -112,7 +118,8 @@ class TestUsersApi(APITestCase):
         bad_user = dict(USER_VASCO)
         bad_user['username'] = 'me'
 
-        response = self.client.post(self.URL, bad_user, format=self.CONTENT_TYPE)
+        response = self.client.post(
+            self.URL, data=json.dumps(bad_user), content_type=self.CONTENT_TYPE)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
@@ -120,7 +127,8 @@ class TestUsersApi(APITestCase):
     def test_create_user_400_existing(self):
         self.assertEqual(User.objects.count(), 1)
 
-        response = self.client.post(self.URL, USER_VASCO, format=self.CONTENT_TYPE)
+        response = self.client.post(
+            self.URL, data=json.dumps(USER_VASCO), content_type=self.CONTENT_TYPE)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 1)
@@ -128,7 +136,8 @@ class TestUsersApi(APITestCase):
     def test_create_user_200(self):
         self.assertEqual(User.objects.count(), 1)
 
-        response = self.client.post(self.URL, USER_JOAO, format=self.CONTENT_TYPE)
+        response = self.client.post(
+            self.URL, data=json.dumps(USER_JOAO), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertEqual(User.objects.count(), 2)
@@ -140,16 +149,19 @@ class TestUsersApi(APITestCase):
         self.assertTrue(user_joao.check_password(USER_JOAO['password']))
 
     def test_retrieve_401(self):
-        response = self.client.get(self.instance_url(USER_VASCO['username']), format=self.CONTENT_TYPE)
+        response = self.client.get(
+            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_retrieve_403(self):
         User.objects.create_user(**USER_JOAO)
-        response = self.client.get(self.instance_url(USER_JOAO['username']), **self.kwargs)
+        response = self.client.get(
+            self.instance_url(USER_JOAO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_retrieve_200(self):
-        response = self.client.get(self.instance_url(USER_VASCO['username']), **self.kwargs)
+        response = self.client.get(
+            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 3)
         self.assertIn('uuid', response.data)
@@ -157,18 +169,21 @@ class TestUsersApi(APITestCase):
         self.assertEqual(response.data['email'], USER_VASCO['email'])
 
     def test_destroy_401(self):
-        response = self.client.delete(self.instance_url(USER_VASCO['username']), format=self.CONTENT_TYPE)
+        response = self.client.delete(
+            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_destroy_403(self):
         User.objects.create_user(**USER_JOAO)
-        response = self.client.delete(self.instance_url(USER_JOAO['username']), **self.kwargs)
+        response = self.client.delete(
+            self.instance_url(USER_JOAO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_destroy_204(self):
         self.assertEqual(User.objects.count(), 1)
 
-        response = self.client.delete(self.instance_url(USER_VASCO['username']), **self.kwargs)
+        response = self.client.delete(
+            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         self.assertEqual(User.objects.count(), 0)

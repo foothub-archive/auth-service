@@ -106,6 +106,11 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
 
+    # https://www.django-rest-framework.org/api-guide/settings/#default_parser_classes
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
+
     # https://www.django-rest-framework.org/api-guide/pagination/#setting-the-pagination-style
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
 
