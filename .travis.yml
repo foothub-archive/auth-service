@@ -9,12 +9,10 @@ before_script:
   - docker-compose build
 
 script:
- - docker-compose run -e CODECOV_TOKEN=$CODECOV_TOKEN --rm web bash -c "cd auth && j-crypto-create-pair && cd .. && flake8 auth && mypy auth && python wait_for_postgres.py && cd auth && coverage run manage.py test -v 2 && coverage html && codecov"
+ - docker-compose run -e CODECOV_TOKEN=$CODECOV_TOKEN --rm web bash -c "make run-ci" 
+
 after_script:
   - docker-compose down
 
 notifications:
   email: false
-
-cache:
-  pip: true
