@@ -25,8 +25,8 @@ class StatusView(APIView):
         return Response(
             status=status.HTTP_200_OK,
             data={
-                'image': os.getenv('DOCKER_IMAGE_NAME', '-'),
-                'tag': os.getenv('DOCKER_IMAGE_TAG', '-'),
+                'image': 'auth',
+                'tag': os.getenv('DOCKER_IMAGE_TAG', 'dev'),
                 'up_time': self.__calculate_up_time()
             },
             content_type='application/json')
