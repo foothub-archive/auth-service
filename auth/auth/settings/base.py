@@ -11,7 +11,7 @@ DEBUG = False
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#allowed-hosts
-ALLOWED_HOSTS: list = ['0.0.0.0']
+ALLOWED_HOSTS: list = []
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#root-urlconf
 ROOT_URLCONF = 'auth.urls'

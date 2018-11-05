@@ -2,11 +2,16 @@ python manage.py makemigrations
 python manage.py migrate
 python manage.py showmigrations
 python manage.py diffsettings
-python manage.py runserver
+python manage.py runserver 0.0.0.0:8000
 python manage.py test
 python manage.py dbshell
 python manage.py shell
-flake8 auth
-mypy auth
+flake8 core
+mypy core
 coverage run manage.py test -v 2 && coverage html
 pip freeze
+make lint
+make type-check
+make migrations-check
+make test
+make run-tests
