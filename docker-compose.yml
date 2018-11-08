@@ -6,21 +6,68 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     env_file:
-      - ./.env_vars/postgres
-  web:
-    image: web
+      - ./dev/env/postgres
+
+  auth_redis:
+    image: redis:5.0
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./dev/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+
+  auth_worker:
+    image: worker
     env_file:
-      - ./.env_vars/postgres
-      - ./.env_vars/django
-    environment:
-      - DJANGO_SECRET_KEY=local_secret
-    build: ./
+      - ./dev/env/postgres
+      - ./dev/env/django
+      - ./dev/env/redis
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.worker
+    volumes:
+      - ./:/code
+    depends_on:
+      - auth_postgres
+      - auth_redis
+
+  auth_flower:
+    image: flower
+    env_file:
+      - ./dev/env/postgres
+      - ./dev/env/django
+      - ./dev/env/redis
+      - ./dev/env/flower
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.flower
+    volumes:
+      - ./:/code
+    ports:
+      - "8551:5555"
+    depends_on:
+      - auth_postgres
+      - auth_redis
+      - auth_worker
+
+  auth_app:
+    image: app
+    env_file:
+      - ./dev/env/postgres
+      - ./dev/env/django
+      - ./dev/env/redis
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.app
     volumes:
       - ./:/code
     ports:
       - "8000:8000"
     depends_on:
       - auth_postgres
-
+      - auth_redis
+      - auth_worker
+      - auth_flower
+      
 volumes:
   pgdata:

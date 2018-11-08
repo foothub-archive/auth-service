@@ -11,6 +11,8 @@ cryptography = "*"
 psycopg2-binary = "*"
 gunicorn = "*"
 j-crypto = "*"
+celery = {extras = ["redis"], version = "*"}
+flower = "*"
 
 [dev-packages]
 ipython = "*"
@@ -19,6 +21,7 @@ flake8 = "*"
 mypy = "*"
 codecov = "*"
 coverage = "*"
+v = {version = "*", editable = true}
 
 [requires]
 python_version = "3.6"

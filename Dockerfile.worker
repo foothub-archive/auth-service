@@ -1,0 +1,10 @@
+FROM python:3.6
+ENV PYTHONUNBUFFERED 1
+
+RUN pip3.6 install pipenv
+
+COPY . code
+WORKDIR /code
+RUN pipenv install --system --dev
+
+CMD cd auth && celery worker -l info --app auth
