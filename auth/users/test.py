@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model, authenticate
 from django.test import TestCase
@@ -6,7 +7,10 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+import jwt
+
 from rest_framework_jwt.settings import api_settings
+
 
 User = get_user_model()
 
@@ -60,6 +64,21 @@ class TestUserManager(TestCase):
         self.assertTrue(user.check_password(USER_VASCO['password']))
 
 
+class TestUserModel(TestCase):
+    def test_create_jwt(self):
+        user = User.objects.create_user(**USER_VASCO)
+        token = user.create_jwt()
+
+        try:
+            api_settings.JWT_DECODE_HANDLER(token)
+        except (jwt.ExpiredSignature, jwt.DecodeError):
+            self.assertTrue(False)
+
+        bad_token = f'{token}_taint'
+        with self.assertRaises(jwt.DecodeError):
+            api_settings.JWT_DECODE_HANDLER(bad_token)
+
+
 class TestUsersApi(APITestCase):
     URL = '/users'
     CONTENT_TYPE = 'application/json'
@@ -70,12 +89,7 @@ class TestUsersApi(APITestCase):
 
     def setUp(self):
         user_vasco = User.objects.create_user(**USER_VASCO)
-
-        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
-        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
-
-        payload = jwt_payload_handler(user_vasco)
-        token = jwt_encode_handler(payload)
+        token = user_vasco.create_jwt()
 
         self.http_auth = {
             'HTTP_AUTHORIZATION': f'JWT {token}',
@@ -136,11 +150,12 @@ class TestUsersApi(APITestCase):
     def test_create_user_200(self):
         self.assertEqual(User.objects.count(), 1)
 
-        response = self.client.post(
-            self.URL, data=json.dumps(USER_JOAO), content_type=self.CONTENT_TYPE)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
-        self.assertEqual(User.objects.count(), 2)
+        with patch('users.views.on_create') as mock:
+            response = self.client.post(
+                self.URL, data=json.dumps(USER_JOAO), content_type=self.CONTENT_TYPE)
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(User.objects.count(), 2)
+            mock.assert_called_once()
 
         user_joao = User.objects.get(username=USER_JOAO['username'])
 
@@ -187,3 +202,8 @@ class TestUsersApi(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         self.assertEqual(User.objects.count(), 0)
+
+
+class TestUsersTasks(TestCase):
+    def test_create_profile(self):
+        assert False
