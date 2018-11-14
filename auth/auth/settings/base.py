@@ -147,11 +147,6 @@ REDIS_HOST = os.environ['REDIS_HOST']
 REDIS_PORT = os.environ['REDIS_PORT']
 REDIS_DB_ID = os.environ['REDIS_DB_ID']
 
-import redis
-server = redis.Redis(host=REDIS_HOST, password=REDIS_PASSWORD,port=REDIS_PORT)
-print('\n\n') 
-print(server.ping())
-print('\n\n') 
 
 CELERY_BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_ID}'
 

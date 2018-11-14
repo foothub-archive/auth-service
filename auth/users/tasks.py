@@ -14,13 +14,15 @@ def create_core_profile(user_uuid: str) -> bool:
 def send_confirmation_email(user_email: str, user_jwt: str, url: str) -> bool:
     message = f'Use the link to confirm email: {url}?jwt={user_jwt}'
 
-    send_mail(
+    sent_mails = send_mail(
         subject='FootHub Registration',
         message=message,
         from_email='FootHub Team <no-reply@foothub.com>',
         recipient_list=[user_email],
         fail_silently=False,
     )
+
+    return sent_mails == 1
 
 
 def on_create(user: User) -> None:

@@ -219,6 +219,7 @@ class TestUsersTasks(TestCase):
         mocked_sce.assert_called_once()
 
     def test_create_core_profile(self):
+        create_core_profile(self.user_vasco.uuid)
         assert False
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
