@@ -1,18 +1,20 @@
 import json
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model, authenticate
-from django.test import TestCase
+from django.contrib.auth import authenticate
+from django.test import TestCase, override_settings
+from django.core import mail
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-import jwt
+from jwt import ExpiredSignature, DecodeError
 
 from rest_framework_jwt.settings import api_settings
 
+from .models import User
+from .tasks import on_create, send_confirmation_email, create_core_profile
 
-User = get_user_model()
 
 USER_VASCO = {
     'username': 'VasmV',
@@ -71,11 +73,11 @@ class TestUserModel(TestCase):
 
         try:
             api_settings.JWT_DECODE_HANDLER(token)
-        except (jwt.ExpiredSignature, jwt.DecodeError):
+        except (ExpiredSignature, DecodeError):
             self.assertTrue(False)
 
         bad_token = f'{token}_taint'
-        with self.assertRaises(jwt.DecodeError):
+        with self.assertRaises(DecodeError):
             api_settings.JWT_DECODE_HANDLER(bad_token)
 
 
@@ -205,5 +207,32 @@ class TestUsersApi(APITestCase):
 
 
 class TestUsersTasks(TestCase):
-    def test_create_profile(self):
+
+    def setUp(self):
+        self.user_vasco = User.objects.create_user(**USER_VASCO)
+
+    @patch('users.tasks.send_confirmation_email.delay')
+    @patch('users.tasks.create_core_profile.delay')
+    def test_on_create(self, mocked_ccp, mocked_sce):
+        on_create(self.user_vasco)
+        mocked_ccp.assert_called_once()
+        mocked_sce.assert_called_once()
+
+    def test_create_core_profile(self):
         assert False
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_send_confirmation_email(self):
+        user_email = self.user_vasco.email
+        token = self.user_vasco.create_jwt()
+        url = 'auth.sercice.com/users/confirm'
+        send_confirmation_email(user_email=user_email, user_jwt=token, url=url)
+
+        self.assertEqual(len(mail.outbox), 1)
+        sent_mail = mail.outbox[0]
+
+        self.assertEqual(sent_mail.from_email, 'FootHub Team <no-reply@foothub.com>')
+        self.assertEqual(sent_mail.subject, "FootHub Registration")
+        self.assertIn("Use the link to confirm email: ", sent_mail.body)
+        self.assertIn(f'{url}?jwt={token}', sent_mail.body)
+        self.assertEqual(sent_mail.to, [user_email])
