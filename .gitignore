@@ -84,7 +84,6 @@ celerybeat-schedule
 # Environments
 .env
 .venv
-env/
 venv/
 ENV/
 env.bak/
@@ -93,6 +92,7 @@ venv.bak/
 # IDEs
 .idea
 .code
+.vscode
 
 # Rope project settings
 .ropeproject

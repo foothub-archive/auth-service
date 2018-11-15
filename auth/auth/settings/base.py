@@ -142,6 +142,18 @@ JWT_AUTH = {
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-user-model
 AUTH_USER_MODEL = 'users.User'
 
+REDIS_PASSWORD = os.environ['REDIS_PASSWORD']
+REDIS_HOST = os.environ['REDIS_HOST']
+REDIS_PORT = os.environ['REDIS_PORT']
+REDIS_DB_ID = os.environ['REDIS_DB_ID']
+
+
+CELERY_BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_ID}'
+
+CELERY_RESULT_BACKEND = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_ID}'
+
+CELERY_TASK_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ['application/json']
 
 # custom
 START_DATETIME = datetime.datetime.now()

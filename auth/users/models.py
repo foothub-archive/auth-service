@@ -1,10 +1,12 @@
 import uuid
+
 from django.db import models
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.utils.deconstruct import deconstructible
 
+from rest_framework_jwt.settings import api_settings
 from .managers import UserManager
 
 
@@ -59,6 +61,8 @@ class User(AbstractBaseUser):
         unique=True
     )
 
+    email_confirmed = models.BooleanField(default=False)
+
     username_validator = UnicodeUsernameValidator()
     blacklist_validator = BlackListValidator(BLACKLISTED_USERNAMES)
     username = models.CharField(
@@ -73,6 +77,10 @@ class User(AbstractBaseUser):
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = UserManager()
+
+    def create_jwt(self) -> str:
+        payload = api_settings.JWT_PAYLOAD_HANDLER(self)
+        return api_settings.JWT_ENCODE_HANDLER(payload)
 
 
 class PhoneNumber(models.Model):
