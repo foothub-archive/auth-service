@@ -10,3 +10,5 @@ ALLOWED_HOSTS = [
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 1025
+
+FRONTEND_URL = '0.0.0.0:8080'

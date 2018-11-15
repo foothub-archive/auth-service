@@ -7,7 +7,6 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.utils.deconstruct import deconstructible
 
 from rest_framework_jwt.settings import api_settings
-
 from .managers import UserManager
 
 

@@ -219,8 +219,26 @@ class TestUsersTasks(TestCase):
         mocked_sce.assert_called_once()
 
     def test_create_core_profile(self):
-        create_core_profile(self.user_vasco.uuid)
-        assert False
+        with patch('users.tasks.post') as mock:
+            def side_effect(url, json):
+                self.assertEqual(url, 'http://core/profiles')
+                self.assertIn('token', json)
+                payload = api_settings.JWT_DECODE_HANDLER(json['token'])
+                self.assertEqual(payload['uuid'], self.user_vasco.uuid)
+
+                return mock
+
+            mock.side_effect = side_effect
+
+            mock.status_code = 201
+            self.assertTrue(create_core_profile(self.user_vasco.uuid))
+            mock.assert_called_once()
+            mock.reset_mock()
+
+            mock.status_code = 404
+            self.assertFalse(create_core_profile(self.user_vasco.uuid))
+            mock.assert_called_once()
+            mock.reset_mock()
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_send_confirmation_email(self):
