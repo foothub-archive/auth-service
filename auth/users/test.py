@@ -244,7 +244,7 @@ class TestUsersTasks(TestCase):
     def test_send_confirmation_email(self):
         user_email = self.user_vasco.email
         token = self.user_vasco.create_jwt()
-        url = 'auth.sercice.com/users/confirm'
+        url = 'auth.service.com/users/confirm'
         send_confirmation_email(user_email=user_email, user_jwt=token, url=url)
 
         self.assertEqual(len(mail.outbox), 1)

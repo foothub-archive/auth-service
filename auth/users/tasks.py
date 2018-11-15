@@ -39,5 +39,5 @@ def on_create(user: User) -> None:
     send_confirmation_email.delay(
         user_email=user.email,
         user_jwt=user.create_jwt(),
-        url=settings.FRONTEND_URL,
+        url=f'{settings.FRONTEND_URL}/confirm-registration'
     )
