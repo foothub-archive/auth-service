@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from unittest.mock import patch
 
 from django.contrib.auth import authenticate
@@ -83,18 +84,23 @@ class TestUserModel(TestCase):
 
 class TestUsersApi(APITestCase):
     URL = '/users'
+    CONFIRM_URL = f'{URL}/confirm_email'
     CONTENT_TYPE = 'application/json'
 
     @classmethod
     def instance_url(cls, username: str):
         return f'{cls.URL}/{username}'
 
+    @classmethod
+    def confirm_email_url(cls, token: Optional[str] = None):
+        return f'{cls.CONFIRM_URL}?token={token}' if token is not None else cls.CONFIRM_URL
+
     def setUp(self):
         user_vasco = User.objects.create_user(**USER_VASCO)
-        token = user_vasco.create_jwt()
+        self.token = user_vasco.create_jwt()
 
         self.http_auth = {
-            'HTTP_AUTHORIZATION': f'JWT {token}',
+            'HTTP_AUTHORIZATION': f'JWT {self.token}',
         }
 
     def test_list_405(self):
@@ -205,6 +211,36 @@ class TestUsersApi(APITestCase):
 
         self.assertEqual(User.objects.count(), 0)
 
+    def test_confirm_400_no_token(self):
+        self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
+
+        response = self.client.post(self.confirm_email_url(), data=json.dumps({}), content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('token', response.data)
+        self.assertEqual(response.data['token'], ["This field is missing or not valid."])
+
+        self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
+
+    def test_confirm_400_bad_token(self):
+        self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
+
+        bad_token = f'{self.token}_bad'
+        response = self.client.post(self.confirm_email_url(bad_token), data=json.dumps({}), content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('token', response.data)
+        self.assertEqual(response.data['token'], ["This field is missing or not valid."])
+
+        self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
+
+    def test_confirm_204(self):
+        self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
+
+        response = self.client.post(
+            self.confirm_email_url(self.token), data=json.dumps({}), content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertTrue(User.objects.get(username=USER_VASCO['username']).email_confirmed)
+
 
 class TestUsersTasks(TestCase):
 
@@ -244,7 +280,7 @@ class TestUsersTasks(TestCase):
     def test_send_confirmation_email(self):
         user_email = self.user_vasco.email
         token = self.user_vasco.create_jwt()
-        url = 'auth.service.com/users/confirm'
+        url = 'auth.service.com/confirm'
         send_confirmation_email(user_email=user_email, user_jwt=token, url=url)
 
         self.assertEqual(len(mail.outbox), 1)
@@ -255,3 +291,18 @@ class TestUsersTasks(TestCase):
         self.assertIn("Use the link to confirm email: ", sent_mail.body)
         self.assertIn(f'{url}?jwt={token}', sent_mail.body)
         self.assertEqual(sent_mail.to, [user_email])
+
+
+class TestConfirmApi(APITestCase):
+    URL = '/confirm-registration'
+    CONTENT_TYPE = 'application/json'
+
+    def setUp(self):
+        user_vasco = User.objects.create_user(**USER_VASCO)
+        token = user_vasco.create_jwt()
+
+        self.http_auth = {
+            'HTTP_AUTHORIZATION': f'JWT {token}',
+        }
+
+
