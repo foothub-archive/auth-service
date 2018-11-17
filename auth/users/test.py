@@ -1,10 +1,11 @@
 import json
 from typing import Optional
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from django.contrib.auth import authenticate
-from django.test import TestCase, override_settings
 from django.core import mail
+from django.conf import settings
+from django.test import TestCase, override_settings
 
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -14,7 +15,7 @@ from jwt import ExpiredSignature, DecodeError
 from rest_framework_jwt.settings import api_settings
 
 from .models import User
-from .tasks import on_create, send_confirmation_email, create_core_profile
+from .tasks import on_create, send_confirmation_email
 
 
 USER_VASCO = {
@@ -84,7 +85,8 @@ class TestUserModel(TestCase):
 
 class TestUsersApi(APITestCase):
     URL = '/users'
-    CONFIRM_URL = f'{URL}/confirm_email'
+    CONFIRM_ENDPOINT = 'confirm_email'
+    SEND_ENDPOINT = 'send_confirmation_email'
     CONTENT_TYPE = 'application/json'
 
     @classmethod
@@ -92,12 +94,17 @@ class TestUsersApi(APITestCase):
         return f'{cls.URL}/{username}'
 
     @classmethod
+    def send_email_url(cls, username: str):
+        return f'{cls.instance_url(username)}/{cls.SEND_ENDPOINT}'
+
+    @classmethod
     def confirm_email_url(cls, token: Optional[str] = None):
-        return f'{cls.CONFIRM_URL}?token={token}' if token is not None else cls.CONFIRM_URL
+        url = f'{cls.URL}/{cls.CONFIRM_ENDPOINT}'
+        return f'{url}?token={token}' if token is not None else url
 
     def setUp(self):
-        user_vasco = User.objects.create_user(**USER_VASCO)
-        self.token = user_vasco.create_jwt()
+        self.user_vasco = User.objects.create_user(**USER_VASCO)
+        self.token = self.user_vasco.create_jwt()
 
         self.http_auth = {
             'HTTP_AUTHORIZATION': f'JWT {self.token}',
@@ -211,6 +218,28 @@ class TestUsersApi(APITestCase):
 
         self.assertEqual(User.objects.count(), 0)
 
+    @patch('users.views.send_confirmation_email')
+    def test_send_confirmation_email_204_user_not_found(self, mock):
+        response = self.client.get(self.send_email_url('unknown'), content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        mock.assert_not_called()
+
+    @patch('users.views.send_confirmation_email')
+    def test_send_confirmation_email_204_already_confirmed_username(self, mock):
+        self.user_vasco.save()
+        response = self.client.get(self.send_email_url(self.user_vasco.username), content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        mock.assert_not_called()
+
+    @patch('users.views.send_confirmation_email')
+    def test_send_confirmation_email_204(self, mock):
+        self.assertFalse(self.user_vasco.email_confirmed)
+        response = self.client.get(self.send_email_url(self.user_vasco.username), content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        mock.assert_called_once()
+        self.user_vasco.refresh_from_db()
+        self.assertTrue(self.user_vasco.email_confirmed)
+
     def test_confirm_400_no_token(self):
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
 
@@ -225,7 +254,8 @@ class TestUsersApi(APITestCase):
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
 
         bad_token = f'{self.token}_bad'
-        response = self.client.post(self.confirm_email_url(bad_token), data=json.dumps({}), content_type=self.CONTENT_TYPE)
+        response = self.client.post(
+            self.confirm_email_url(bad_token), data=json.dumps({}), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('token', response.data)
         self.assertEqual(response.data['token'], ["This field is missing or not valid."])
@@ -248,40 +278,18 @@ class TestUsersTasks(TestCase):
         self.user_vasco = User.objects.create_user(**USER_VASCO)
 
     @patch('users.tasks.send_confirmation_email.delay')
-    @patch('users.tasks.create_core_profile.delay')
-    def test_on_create(self, mocked_ccp, mocked_sce):
+    def test_on_create(self, mocked):
         on_create(self.user_vasco)
-        mocked_ccp.assert_called_once()
-        mocked_sce.assert_called_once()
-
-    def test_create_core_profile(self):
-        with patch('users.tasks.post') as mock:
-            def side_effect(url, json):
-                self.assertEqual(url, 'http://core/profiles')
-                self.assertIn('token', json)
-                payload = api_settings.JWT_DECODE_HANDLER(json['token'])
-                self.assertEqual(payload['uuid'], self.user_vasco.uuid)
-
-                return mock
-
-            mock.side_effect = side_effect
-
-            mock.status_code = 201
-            self.assertTrue(create_core_profile(self.user_vasco.uuid))
-            mock.assert_called_once()
-            mock.reset_mock()
-
-            mock.status_code = 404
-            self.assertFalse(create_core_profile(self.user_vasco.uuid))
-            mock.assert_called_once()
-            mock.reset_mock()
+        mocked.assert_called_once_with(user=self.user_vasco)
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_send_confirmation_email(self):
-        user_email = self.user_vasco.email
-        token = self.user_vasco.create_jwt()
-        url = 'auth.service.com/confirm'
-        send_confirmation_email(user_email=user_email, user_jwt=token, url=url)
+        mocked_user = Mock()
+        mocked_user.email = 'user@email.mock'
+        mocked_user.jwt = 'jwt.mocked'
+
+        mocked_user.create_jwt.return_value = 'jwt.mocked'
+        send_confirmation_email(mocked_user)
 
         self.assertEqual(len(mail.outbox), 1)
         sent_mail = mail.outbox[0]
@@ -289,20 +297,5 @@ class TestUsersTasks(TestCase):
         self.assertEqual(sent_mail.from_email, 'FootHub Team <no-reply@foothub.com>')
         self.assertEqual(sent_mail.subject, "FootHub Registration")
         self.assertIn("Use the link to confirm email: ", sent_mail.body)
-        self.assertIn(f'{url}?jwt={token}', sent_mail.body)
-        self.assertEqual(sent_mail.to, [user_email])
-
-
-class TestConfirmApi(APITestCase):
-    URL = '/confirm-registration'
-    CONTENT_TYPE = 'application/json'
-
-    def setUp(self):
-        user_vasco = User.objects.create_user(**USER_VASCO)
-        token = user_vasco.create_jwt()
-
-        self.http_auth = {
-            'HTTP_AUTHORIZATION': f'JWT {token}',
-        }
-
-
+        self.assertIn(f'{settings.FRONTEND_URL}/confirm-registration?token={mocked_user.jwt}', sent_mail.body)
+        self.assertEqual(sent_mail.to, [mocked_user.email])

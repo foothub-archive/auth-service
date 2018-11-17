@@ -1,11 +1,11 @@
+from django.http import Http404
 from rest_framework import mixins, viewsets, response, status, decorators, permissions
-
 from rest_framework_jwt.serializers import VerifyJSONWebTokenSerializer
 
 from .models import User
-from .serializers import UserSerializer, EmailConfirmationSerializer
+from .serializers import UserSerializer
 from .permissions import UserPermissions
-from .tasks import on_create
+from .tasks import on_create, send_confirmation_email
 
 
 class UserViewSet(mixins.ListModelMixin,
@@ -28,6 +28,20 @@ class UserViewSet(mixins.ListModelMixin,
         user = serializer.save()
         on_create(user)
 
+    @decorators.action(methods=['get'], detail=True,
+                       permission_classes=(permissions.AllowAny,))
+    def send_confirmation_email(self, request, *args, **kwargs):
+        # do not provide feedback regarding if the request was actually successful or not
+        try:
+            user = self.get_object()
+        except Http404:
+            user = None
+
+        if user is not None and not user.email_confirmed:
+            send_confirmation_email(user)
+
+        return response.Response(status=status.HTTP_204_NO_CONTENT)
+
     @decorators.action(methods=['post'], detail=False,
                        permission_classes=(permissions.AllowAny,), serializer_class=VerifyJSONWebTokenSerializer)
     def confirm_email(self, request, *args, **kwargs):
@@ -41,4 +55,3 @@ class UserViewSet(mixins.ListModelMixin,
         user.email_confirmed = True
         user.save()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
-
