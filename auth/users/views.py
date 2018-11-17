@@ -3,7 +3,7 @@ from rest_framework import mixins, viewsets, response, status, decorators, permi
 from rest_framework_jwt.serializers import VerifyJSONWebTokenSerializer
 
 from .models import User
-from .serializers import UserSerializer
+from .serializers import UserSerializer, ConfirmEmailSerializer
 from .permissions import UserPermissions
 from .tasks import on_create, send_confirmation_email
 
@@ -38,7 +38,7 @@ class UserViewSet(mixins.ListModelMixin,
             user = None
 
         if user is not None and not user.email_confirmed:
-            send_confirmation_email(user)
+            send_confirmation_email(user=ConfirmEmailSerializer(user).data)
 
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
