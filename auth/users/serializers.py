@@ -17,3 +17,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 UserJwtPayloadSerializer = UserSerializer
+
+
+class ConfirmEmailSerializer(serializers.ModelSerializer):
+    token = serializers.SerializerMethodField()
+
+    def get_token(self, obj: User):
+        return obj.create_jwt()
+
+    class Meta:
+        model = User
+        fields = ('email', 'token')

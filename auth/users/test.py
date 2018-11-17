@@ -1,6 +1,6 @@
 import json
 from typing import Optional
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 from django.contrib.auth import authenticate
 from django.core import mail
@@ -15,6 +15,7 @@ from jwt import ExpiredSignature, DecodeError
 from rest_framework_jwt.settings import api_settings
 
 from .models import User
+from .serializers import ConfirmEmailSerializer
 from .tasks import on_create, send_confirmation_email
 
 
@@ -237,7 +238,7 @@ class TestUsersApi(APITestCase):
         self.assertFalse(self.user_vasco.email_confirmed)
         response = self.client.get(self.send_email_url(self.user_vasco.username), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        mock.assert_called_once()
+        mock.assert_called_once_with(user=ConfirmEmailSerializer(self.user_vasco).data)
 
     def test_confirm_400_no_token(self):
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
@@ -246,7 +247,6 @@ class TestUsersApi(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('token', response.data)
         self.assertEqual(response.data['token'], ["This field is missing or not valid."])
-
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
 
     def test_confirm_400_bad_token(self):
@@ -277,18 +277,18 @@ class TestUsersTasks(TestCase):
         self.user_vasco = User.objects.create_user(**USER_VASCO)
 
     @patch('users.tasks.send_confirmation_email.delay')
-    def test_on_create(self, mocked):
+    def test_on_create(self, mock):
         on_create(self.user_vasco)
-        mocked.assert_called_once_with(user=self.user_vasco)
+        mock.assert_called_once_with(user=ConfirmEmailSerializer(self.user_vasco).data)
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_send_confirmation_email(self):
-        mocked_user = Mock()
-        mocked_user.email = 'user@email.mock'
-        mocked_user.jwt = 'jwt.mocked'
+        user_dict = {
+            'email': self.user_vasco.email,
+            'token': 'jwt.mocked'
+        }
 
-        mocked_user.create_jwt.return_value = 'jwt.mocked'
-        send_confirmation_email(mocked_user)
+        send_confirmation_email(user=user_dict)
 
         self.assertEqual(len(mail.outbox), 1)
         sent_mail = mail.outbox[0]
@@ -296,5 +296,5 @@ class TestUsersTasks(TestCase):
         self.assertEqual(sent_mail.from_email, 'FootHub Team <no-reply@foothub.com>')
         self.assertEqual(sent_mail.subject, "FootHub Registration")
         self.assertIn("Use the link to confirm email: ", sent_mail.body)
-        self.assertIn(f'{settings.FRONTEND_URL}/confirm-registration?token={mocked_user.jwt}', sent_mail.body)
-        self.assertEqual(sent_mail.to, [mocked_user.email])
+        self.assertIn(f'{settings.FRONTEND_URL}/confirm-registration?token={user_dict["token"]}', sent_mail.body)
+        self.assertEqual(sent_mail.to, [user_dict['email']])
