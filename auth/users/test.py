@@ -226,6 +226,7 @@ class TestUsersApi(APITestCase):
 
     @patch('users.views.send_confirmation_email')
     def test_send_confirmation_email_204_already_confirmed_username(self, mock):
+        self.user_vasco.email_confirmed = True
         self.user_vasco.save()
         response = self.client.get(self.send_email_url(self.user_vasco.username), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -237,8 +238,6 @@ class TestUsersApi(APITestCase):
         response = self.client.get(self.send_email_url(self.user_vasco.username), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         mock.assert_called_once()
-        self.user_vasco.refresh_from_db()
-        self.assertTrue(self.user_vasco.email_confirmed)
 
     def test_confirm_400_no_token(self):
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
