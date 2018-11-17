@@ -13,6 +13,7 @@ gunicorn = "*"
 j-crypto = "*"
 celery = {extras = ["redis"], version = "*"}
 flower = "*"
+requests = "*"
 
 [dev-packages]
 ipython = "*"

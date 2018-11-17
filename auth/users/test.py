@@ -16,7 +16,7 @@ from rest_framework_jwt.settings import api_settings
 
 from .models import User
 from .serializers import ConfirmEmailSerializer
-from .tasks import on_create, send_confirmation_email
+from .tasks import broadcast_registration, send_confirmation_email, on_create
 
 
 USER_VASCO = {
@@ -86,6 +86,7 @@ class TestUserModel(TestCase):
 
 class TestUsersApi(APITestCase):
     URL = '/users'
+    BROADCAST_ENDPOINT = 'broadcast_registration'
     CONFIRM_ENDPOINT = 'confirm_email'
     SEND_ENDPOINT = 'send_confirmation_email'
     CONTENT_TYPE = 'application/json'
@@ -93,6 +94,10 @@ class TestUsersApi(APITestCase):
     @classmethod
     def instance_url(cls, username: str):
         return f'{cls.URL}/{username}'
+
+    @classmethod
+    def broadcast_registration_url(cls):
+        return f'{cls.URL}/{cls.BROADCAST_ENDPOINT}'
 
     @classmethod
     def send_email_url(cls, username: str):
@@ -219,6 +224,18 @@ class TestUsersApi(APITestCase):
 
         self.assertEqual(User.objects.count(), 0)
 
+    @patch('users.views.broadcast_registration')
+    def test_broadcast_registration_401(self, mock):
+        response = self.client.get(self.broadcast_registration_url(), content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, 401)
+        mock.assert_not_called()
+
+    @patch('users.views.broadcast_registration')
+    def test_broadcast_registration_204(self, mock):
+        response = self.client.get(self.broadcast_registration_url(), content_type=self.CONTENT_TYPE, **self.http_auth)
+        self.assertEqual(response.status_code, 204)
+        mock.assert_called_once_with(user_uuid=self.user_vasco.uuid)
+
     @patch('users.views.send_confirmation_email')
     def test_send_confirmation_email_204_user_not_found(self, mock):
         response = self.client.get(self.send_email_url('unknown'), content_type=self.CONTENT_TYPE)
@@ -277,9 +294,37 @@ class TestUsersTasks(TestCase):
         self.user_vasco = User.objects.create_user(**USER_VASCO)
 
     @patch('users.tasks.send_confirmation_email.delay')
-    def test_on_create(self, mock):
+    @patch('users.tasks.broadcast_registration.delay')
+    def test_on_create(self, mock_broadcast, mock_confirmation):
         on_create(self.user_vasco)
-        mock.assert_called_once_with(user=ConfirmEmailSerializer(self.user_vasco).data)
+        mock_broadcast.assert_called_once_with(user_uuid=self.user_vasco.uuid)
+        mock_confirmation.assert_called_once_with(user=ConfirmEmailSerializer(self.user_vasco).data)
+
+    def test_broadcast_registration(self):
+        with patch('users.tasks.post') as mock:
+
+            expected_subscribers = [
+                'http://core/profiles'
+            ]
+
+            def side_effect(url, json):
+                self.assertIn(url, expected_subscribers)
+                self.assertIn('token', json)
+                payload = api_settings.JWT_DECODE_HANDLER(json['token'])
+                self.assertEqual(payload['uuid'], self.user_vasco.uuid)
+                return mock
+
+            mock.side_effect = side_effect
+
+            mock.status_code = 201
+            self.assertTrue(broadcast_registration(self.user_vasco.uuid))
+            self.assertEqual(mock.call_count, len(expected_subscribers))
+
+            mock.reset_mock()
+
+            mock.status_code = 404
+            self.assertFalse(broadcast_registration(self.user_vasco.uuid))
+            self.assertEqual(mock.call_count, len(expected_subscribers))
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_send_confirmation_email(self):

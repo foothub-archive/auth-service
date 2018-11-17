@@ -5,7 +5,7 @@ from rest_framework_jwt.serializers import VerifyJSONWebTokenSerializer
 from .models import User
 from .serializers import UserSerializer, ConfirmEmailSerializer
 from .permissions import UserPermissions
-from .tasks import on_create, send_confirmation_email
+from .tasks import broadcast_registration, send_confirmation_email, on_create
 
 
 class UserViewSet(mixins.ListModelMixin,
@@ -28,9 +28,14 @@ class UserViewSet(mixins.ListModelMixin,
         user = serializer.save()
         on_create(user)
 
-    @decorators.action(methods=['get'], detail=True,
-                       permission_classes=(permissions.AllowAny,))
-    def send_confirmation_email(self, request, *args, **kwargs):
+    @decorators.action(methods=['get'], detail=False)
+    def broadcast_registration(self, request, *args, **kwargs):
+        user = request.user
+        broadcast_registration(user_uuid=user.uuid)
+        return response.Response(status=status.HTTP_204_NO_CONTENT)
+
+    @decorators.action(methods=['get'], detail=True, permission_classes=(permissions.AllowAny,))
+    def send_confirmation_email(self, *args, **kwargs):
         # do not provide feedback regarding if the request was actually successful or not
         try:
             user = self.get_object()
