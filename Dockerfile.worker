@@ -5,6 +5,6 @@ RUN pip3.6 install pipenv
 
 COPY . code
 WORKDIR /code
-RUN pipenv install --system --dev
+RUN pipenv install --system --deploy --dev
 
 CMD cd auth && celery worker -l info --app auth
