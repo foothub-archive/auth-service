@@ -11,6 +11,7 @@ cryptography = "*"
 psycopg2-binary = "*"
 gunicorn = "*"
 j-crypto = "*"
+redis = "===2.10.6"
 celery = {extras = ["redis"], version = "*"}
 flower = "*"
 requests = "*"

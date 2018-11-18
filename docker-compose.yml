@@ -62,7 +62,7 @@ services:
     volumes:
       - ./:/code
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       - auth_postgres
       - auth_redis
