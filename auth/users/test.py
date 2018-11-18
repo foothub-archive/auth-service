@@ -116,6 +116,10 @@ class TestUsersApi(APITestCase):
             'HTTP_AUTHORIZATION': f'JWT {self.token}',
         }
 
+    def test_options_200(self):
+        response = self.client.options(self.URL, content_type=self.CONTENT_TYPE)
+        self.assertEqual(response.status_code, 200)
+
     def test_list_405(self):
         response = self.client.get(
             self.URL, content_type=self.CONTENT_TYPE, **self.http_auth)
