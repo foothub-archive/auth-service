@@ -12,3 +12,8 @@ EMAIL_HOST = 'localhost'
 EMAIL_PORT = 1025
 
 FRONTEND_URL = '0.0.0.0:8080'
+
+JWT_AUTH: dict = {
+    **JWT_AUTH,
+    'JWT_VERIFY_EXPIRATION': False,
+}
