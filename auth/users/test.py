@@ -308,7 +308,7 @@ class TestUsersTasks(TestCase):
         with patch('users.tasks.post') as mock:
 
             expected_subscribers = [
-                'http://core/profiles'
+                'http://core:8000/profiles'
             ]
 
             def side_effect(url, json):

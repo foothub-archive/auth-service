@@ -13,7 +13,7 @@ from .serializers import ConfirmEmailSerializer
 @shared_task
 def broadcast_registration(user_uuid: str) -> bool:
     subscribers = [
-        'http://core/profiles',
+        'http://core:8000/profiles',
     ]
 
     responses = []
