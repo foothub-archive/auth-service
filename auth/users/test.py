@@ -117,12 +117,12 @@ class TestUsersApi(APITestCase):
         }
 
     def test_options_200(self):
-        response = self.client.options(self.URL, content_type=self.CONTENT_TYPE)
+        response = self.client.options(self.URL)
         self.assertEqual(response.status_code, 200)
 
     def test_list_405(self):
         response = self.client.get(
-            self.URL, content_type=self.CONTENT_TYPE, **self.http_auth)
+            self.URL, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_update_405(self):
@@ -236,13 +236,13 @@ class TestUsersApi(APITestCase):
 
     @patch('users.views.broadcast_registration')
     def test_broadcast_registration_204(self, mock):
-        response = self.client.get(self.broadcast_registration_url(), content_type=self.CONTENT_TYPE, **self.http_auth)
+        response = self.client.get(self.broadcast_registration_url(), **self.http_auth)
         self.assertEqual(response.status_code, 204)
         mock.assert_called_once_with(user_uuid=self.user_vasco.uuid)
 
     @patch('users.views.send_confirmation_email')
     def test_send_confirmation_email_204_user_not_found(self, mock):
-        response = self.client.get(self.send_email_url('unknown'), content_type=self.CONTENT_TYPE)
+        response = self.client.get(self.send_email_url('unknown'))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         mock.assert_not_called()
 
@@ -250,7 +250,7 @@ class TestUsersApi(APITestCase):
     def test_send_confirmation_email_204_already_confirmed_username(self, mock):
         self.user_vasco.email_confirmed = True
         self.user_vasco.save()
-        response = self.client.get(self.send_email_url(self.user_vasco.username), content_type=self.CONTENT_TYPE)
+        response = self.client.get(self.send_email_url(self.user_vasco.username))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         mock.assert_not_called()
 
