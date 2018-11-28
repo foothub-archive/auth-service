@@ -203,10 +203,10 @@ class TestUsersApi(APITestCase):
         response = self.client.get(
             self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
-        self.assertIn('uuid', response.data)
-        self.assertEqual(response.data['username'], USER_VASCO['username'])
-        self.assertEqual(response.data['email'], USER_VASCO['email'])
+        self.assertEqual(len(response.json()), 3)
+        self.assertIn('uuid', response.json())
+        self.assertEqual(response.json()['username'], USER_VASCO['username'])
+        self.assertEqual(response.json()['email'], USER_VASCO['email'])
 
     def test_destroy_401(self):
         response = self.client.delete(
@@ -266,8 +266,8 @@ class TestUsersApi(APITestCase):
 
         response = self.client.post(self.confirm_email_url(), data=json.dumps({}), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('token', response.data)
-        self.assertEqual(response.data['token'], ["This field is missing or not valid."])
+        self.assertIn('token', response.json())
+        self.assertEqual(response.json()['token'], ["This field is required."])
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
 
     def test_confirm_400_bad_token(self):
@@ -277,9 +277,8 @@ class TestUsersApi(APITestCase):
         response = self.client.post(
             self.confirm_email_url(bad_token), data=json.dumps({}), content_type=self.CONTENT_TYPE)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('token', response.data)
-        self.assertEqual(response.data['token'], ["This field is missing or not valid."])
-
+        self.assertIn('non_field_errors', response.json())
+        self.assertEqual(response.json()['non_field_errors'], ["Error decoding signature."])
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
 
     def test_confirm_204(self):

@@ -53,8 +53,7 @@ class UserViewSet(mixins.ListModelMixin,
         serializer = self.get_serializer(data=request.query_params)
 
         if not serializer.is_valid():
-            return response.Response(
-                data={'token': ["This field is missing or not valid."]}, status=status.HTTP_400_BAD_REQUEST)
+            return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.object.get('user')
         user.email_confirmed = True
