@@ -21,16 +21,14 @@ WSGI_APPLICATION = 'auth.wsgi.application'
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#installed-apps
 INSTALLED_APPS = [
-    'rest_framework',  # utilities for rest apis
+    'rest_framework',  # https://www.django-rest-framework.org/
     'users',
 ]
 
 # https://docs.djangoproject.com/en/2.0/topics/http/middleware/
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'utils.middleware.CORSMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # https://github.com/ottoyiu/django-cors-headers
 ]
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#authentication-backends
@@ -147,13 +145,33 @@ REDIS_HOST = os.environ['REDIS_HOST']
 REDIS_PORT = os.environ['REDIS_PORT']
 REDIS_DB_ID = os.environ['REDIS_DB_ID']
 
-
+# http://docs.celeryproject.org/en/latest/userguide/configuration.html#broker-url
 CELERY_BROKER_URL = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_ID}'
-
+# http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-result_backend
 CELERY_RESULT_BACKEND = f'redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_ID}'
-
+# http://docs.celeryproject.org/en/latest/userguide/configuration.html#task-serializer
 CELERY_TASK_SERIALIZER = "json"
+# http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-accept_content
 CELERY_ACCEPT_CONTENT = ['application/json']
+
+# https://github.com/OttoYiu/django-cors-headers#cors_origin_allow_all
+CORS_ORIGIN_ALLOW_ALL = True
+
+# https://github.com/OttoYiu/django-cors-headers#cors_allow_methods
+CORS_ALLOW_METHODS = (
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+)
+
+# https://github.com/OttoYiu/django-cors-headers#cors_allow_headers
+CORS_ALLOW_HEADERS = (
+    'authorization',
+    'content-type',
+)
 
 # custom
 START_DATETIME = datetime.datetime.now()

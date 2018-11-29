@@ -1,6 +1,6 @@
 [run]
 branch = True
 
-source = auth, utils, jwt_utils, users
+source = auth, jwt_utils, users
 
 omit = *migrations*, *urls*, *test*, *wsgi.py
