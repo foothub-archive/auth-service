@@ -116,13 +116,16 @@ class TestUsersApi(APITestCase):
             'HTTP_AUTHORIZATION': f'JWT {self.token}',
         }
 
-    def test_options_200(self):
+    def test_options_401(self):
         response = self.client.options(self.URL)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_options_200(self):
+        response = self.client.options(self.URL, **self.http_auth)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_list_405(self):
-        response = self.client.get(
-            self.URL, **self.http_auth)
+        response = self.client.get(self.URL, **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_update_405(self):
@@ -190,18 +193,18 @@ class TestUsersApi(APITestCase):
 
     def test_retrieve_401(self):
         response = self.client.get(
-            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE)
+            self.instance_url(USER_VASCO['username']))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_retrieve_403(self):
         User.objects.create_user(**USER_JOAO)
         response = self.client.get(
-            self.instance_url(USER_JOAO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
+            self.instance_url(USER_JOAO['username']), **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_retrieve_200(self):
         response = self.client.get(
-            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
+            self.instance_url(USER_VASCO['username']), **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 3)
         self.assertIn('uuid', response.json())
@@ -210,27 +213,27 @@ class TestUsersApi(APITestCase):
 
     def test_destroy_401(self):
         response = self.client.delete(
-            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE)
+            self.instance_url(USER_VASCO['username']))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_destroy_403(self):
         User.objects.create_user(**USER_JOAO)
         response = self.client.delete(
-            self.instance_url(USER_JOAO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
+            self.instance_url(USER_JOAO['username']), **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_destroy_204(self):
         self.assertEqual(User.objects.count(), 1)
 
         response = self.client.delete(
-            self.instance_url(USER_VASCO['username']), content_type=self.CONTENT_TYPE, **self.http_auth)
+            self.instance_url(USER_VASCO['username']), **self.http_auth)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
         self.assertEqual(User.objects.count(), 0)
 
     @patch('users.views.broadcast_registration')
     def test_broadcast_registration_401(self, mock):
-        response = self.client.get(self.broadcast_registration_url(), content_type=self.CONTENT_TYPE)
+        response = self.client.get(self.broadcast_registration_url())
         self.assertEqual(response.status_code, 401)
         mock.assert_not_called()
 
@@ -257,7 +260,7 @@ class TestUsersApi(APITestCase):
     @patch('users.views.send_confirmation_email')
     def test_send_confirmation_email_204(self, mock):
         self.assertFalse(self.user_vasco.email_confirmed)
-        response = self.client.get(self.send_email_url(self.user_vasco.username), content_type=self.CONTENT_TYPE)
+        response = self.client.get(self.send_email_url(self.user_vasco.username))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         mock.assert_called_once_with(user=ConfirmEmailSerializer(self.user_vasco).data)
 
