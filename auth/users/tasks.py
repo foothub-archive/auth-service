@@ -11,14 +11,17 @@ from .serializers import ConfirmEmailSerializer
 
 
 @shared_task
-def broadcast_registration(user_uuid: str) -> bool:
+def broadcast_registration(uuid: str, username: str) -> bool:
     subscribers = [
         'http://core:8000/profiles',
     ]
 
     responses = []
 
-    signed_user_uuid = api_settings.JWT_ENCODE_HANDLER({'uuid': user_uuid})
+    signed_user_uuid = api_settings.JWT_ENCODE_HANDLER({
+        'uuid': uuid,
+        'username': username,
+    })
 
     for subscriber in subscribers:
         responses.append(post(url=subscriber, json={'token': signed_user_uuid}))
@@ -43,5 +46,5 @@ def send_confirmation_email(user: Dict[str, Any]) -> bool:
 
 
 def on_create(user: User) -> None:
-    broadcast_registration.delay(user_uuid=user.uuid)
+    broadcast_registration.delay(uuid=user.uuid, username=user.username)
     send_confirmation_email.delay(user=ConfirmEmailSerializer(user).data)

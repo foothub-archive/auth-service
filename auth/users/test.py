@@ -241,7 +241,7 @@ class TestUsersApi(APITestCase):
     def test_broadcast_registration_204(self, mock):
         response = self.client.get(self.broadcast_registration_url(), **self.http_auth)
         self.assertEqual(response.status_code, 204)
-        mock.assert_called_once_with(user_uuid=self.user_vasco.uuid)
+        mock.assert_called_once_with(uuid=self.user_vasco.uuid, username=self.user_vasco.username)
 
     @patch('users.views.send_confirmation_email')
     def test_send_confirmation_email_204_user_not_found(self, mock):
@@ -303,7 +303,7 @@ class TestUsersTasks(TestCase):
     @patch('users.tasks.broadcast_registration.delay')
     def test_on_create(self, mock_broadcast, mock_confirmation):
         on_create(self.user_vasco)
-        mock_broadcast.assert_called_once_with(user_uuid=self.user_vasco.uuid)
+        mock_broadcast.assert_called_once_with(uuid=self.user_vasco.uuid, username=self.user_vasco.username)
         mock_confirmation.assert_called_once_with(user=ConfirmEmailSerializer(self.user_vasco).data)
 
     def test_broadcast_registration(self):
@@ -318,18 +318,19 @@ class TestUsersTasks(TestCase):
                 self.assertIn('token', json)
                 payload = api_settings.JWT_DECODE_HANDLER(json['token'])
                 self.assertEqual(payload['uuid'], self.user_vasco.uuid)
+                self.assertEqual(payload['username'], self.user_vasco.username)
                 return mock
 
             mock.side_effect = side_effect
 
             mock.status_code = 201
-            self.assertTrue(broadcast_registration(self.user_vasco.uuid))
+            self.assertTrue(broadcast_registration(self.user_vasco.uuid, self.user_vasco.username))
             self.assertEqual(mock.call_count, len(expected_subscribers))
 
             mock.reset_mock()
 
             mock.status_code = 404
-            self.assertFalse(broadcast_registration(self.user_vasco.uuid))
+            self.assertFalse(broadcast_registration(self.user_vasco.uuid, self.user_vasco.username))
             self.assertEqual(mock.call_count, len(expected_subscribers))
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
