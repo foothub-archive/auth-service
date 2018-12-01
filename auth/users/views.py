@@ -31,7 +31,7 @@ class UserViewSet(mixins.ListModelMixin,
     @decorators.action(methods=['get'], detail=False)
     def broadcast_registration(self, request, *args, **kwargs):
         user = request.user
-        broadcast_registration(user_uuid=user.uuid)
+        broadcast_registration(uuid=user.uuid, username=user.username)
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
     @decorators.action(methods=['get'], detail=True, permission_classes=(permissions.AllowAny,))
