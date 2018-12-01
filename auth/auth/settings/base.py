@@ -135,6 +135,7 @@ JWT_AUTH = {
     'JWT_PUBLIC_KEY': PUBLIC_KEY,
     'JWT_ALGORITHM': 'RS256',
     'JWT_PAYLOAD_HANDLER': 'jwt_utils.handlers.jwt_payload_handler',
+    'JWT_RESPONSE_PAYLOAD_HANDLER': 'jwt_utils.handlers.jwt_response_payload_handler',
 }
 
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-user-model
