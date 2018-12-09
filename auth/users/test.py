@@ -6,13 +6,9 @@ from django.contrib.auth import authenticate
 from django.core import mail
 from django.conf import settings
 from django.test import TestCase, override_settings
-
-from rest_framework import status
 from rest_framework.test import APITestCase
-
-from jwt import ExpiredSignature, DecodeError
-
 from rest_framework_jwt.settings import api_settings
+from jwt import ExpiredSignature, DecodeError
 
 from .models import User
 from .serializers import ConfirmEmailSerializer
@@ -89,24 +85,29 @@ class TestUsersApi(APITestCase):
     BROADCAST_ENDPOINT = 'broadcast_registration'
     CONFIRM_ENDPOINT = 'confirm_email'
     SEND_ENDPOINT = 'send_confirmation_email'
+    ME_ENDPOINT = 'me'
     CONTENT_TYPE = 'application/json'
 
     @classmethod
-    def instance_url(cls, username: str):
+    def instance_url(cls, username: str) -> str:
         return f'{cls.URL}/{username}'
 
     @classmethod
-    def broadcast_registration_url(cls):
+    def broadcast_registration_url(cls) -> str:
         return f'{cls.URL}/{cls.BROADCAST_ENDPOINT}'
 
     @classmethod
-    def send_email_url(cls, username: str):
+    def send_email_url(cls, username: str) -> str:
         return f'{cls.instance_url(username)}/{cls.SEND_ENDPOINT}'
 
     @classmethod
-    def confirm_email_url(cls, token: Optional[str] = None):
+    def confirm_email_url(cls, token: Optional[str] = None) -> str:
         url = f'{cls.URL}/{cls.CONFIRM_ENDPOINT}'
         return f'{url}?token={token}' if token is not None else url
+
+    @classmethod
+    def me_url(cls) -> str:
+        return f'{cls.URL}/{cls.ME_ENDPOINT}'
 
     def setUp(self):
         self.user_vasco = User.objects.create_user(**USER_VASCO)
@@ -118,27 +119,27 @@ class TestUsersApi(APITestCase):
 
     def test_options_401(self):
         response = self.client.options(self.URL)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, 401)
 
     def test_options_200(self):
         response = self.client.options(self.URL, **self.http_auth)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, 200)
 
     def test_list_405(self):
         response = self.client.get(self.URL, **self.http_auth)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code, 405)
 
     def test_update_405(self):
         response = self.client.put(
             self.instance_url(USER_VASCO['username']),
             data=json.dumps({}), content_type=self.CONTENT_TYPE, **self.http_auth)
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code, 405)
 
     def test_create_user_403(self):
         response = self.client.post(
             self.URL, data=json.dumps(USER_JOAO), content_type=self.CONTENT_TYPE, **self.http_auth)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(User.objects.count(), 1)
 
     def test_create_user_400_invalid(self):
@@ -152,7 +153,7 @@ class TestUsersApi(APITestCase):
         response = self.client.post(
             self.URL, data=json.dumps(bad_user), content_type=self.CONTENT_TYPE)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(User.objects.count(), 1)
 
     def test_create_user_400_forbidden(self):
@@ -163,7 +164,7 @@ class TestUsersApi(APITestCase):
         response = self.client.post(
             self.URL, data=json.dumps(bad_user), content_type=self.CONTENT_TYPE)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(User.objects.count(), 1)
 
     def test_create_user_400_existing(self):
@@ -172,7 +173,7 @@ class TestUsersApi(APITestCase):
         response = self.client.post(
             self.URL, data=json.dumps(USER_VASCO), content_type=self.CONTENT_TYPE)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(User.objects.count(), 1)
 
     def test_create_user_200(self):
@@ -181,7 +182,7 @@ class TestUsersApi(APITestCase):
         with patch('users.views.on_create') as mock:
             response = self.client.post(
                 self.URL, data=json.dumps(USER_JOAO), content_type=self.CONTENT_TYPE)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.status_code, 201)
             self.assertEqual(User.objects.count(), 2)
             mock.assert_called_once()
 
@@ -194,18 +195,18 @@ class TestUsersApi(APITestCase):
     def test_retrieve_401(self):
         response = self.client.get(
             self.instance_url(USER_VASCO['username']))
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, 401)
 
     def test_retrieve_403(self):
         User.objects.create_user(**USER_JOAO)
         response = self.client.get(
             self.instance_url(USER_JOAO['username']), **self.http_auth)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, 403)
 
     def test_retrieve_200(self):
         response = self.client.get(
             self.instance_url(USER_VASCO['username']), **self.http_auth)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 3)
         self.assertIn('uuid', response.json())
         self.assertEqual(response.json()['username'], USER_VASCO['username'])
@@ -214,20 +215,20 @@ class TestUsersApi(APITestCase):
     def test_destroy_401(self):
         response = self.client.delete(
             self.instance_url(USER_VASCO['username']))
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, 401)
 
     def test_destroy_403(self):
         User.objects.create_user(**USER_JOAO)
         response = self.client.delete(
             self.instance_url(USER_JOAO['username']), **self.http_auth)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, 403)
 
     def test_destroy_204(self):
         self.assertEqual(User.objects.count(), 1)
 
         response = self.client.delete(
             self.instance_url(USER_VASCO['username']), **self.http_auth)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, 204)
 
         self.assertEqual(User.objects.count(), 0)
 
@@ -246,7 +247,7 @@ class TestUsersApi(APITestCase):
     @patch('users.views.send_confirmation_email')
     def test_send_confirmation_email_204_user_not_found(self, mock):
         response = self.client.get(self.send_email_url('unknown'))
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, 204)
         mock.assert_not_called()
 
     @patch('users.views.send_confirmation_email')
@@ -254,21 +255,21 @@ class TestUsersApi(APITestCase):
         self.user_vasco.email_confirmed = True
         self.user_vasco.save()
         response = self.client.get(self.send_email_url(self.user_vasco.username))
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, 204)
         mock.assert_not_called()
 
     @patch('users.views.send_confirmation_email')
     def test_send_confirmation_email_204(self, mock):
         self.assertFalse(self.user_vasco.email_confirmed)
         response = self.client.get(self.send_email_url(self.user_vasco.username))
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, 204)
         mock.assert_called_once_with(user=ConfirmEmailSerializer(self.user_vasco).data)
 
     def test_confirm_400_no_token(self):
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
 
         response = self.client.post(self.confirm_email_url(), data=json.dumps({}), content_type=self.CONTENT_TYPE)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, 400)
         self.assertIn('token', response.json())
         self.assertEqual(response.json()['token'], ["This field is required."])
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
@@ -279,7 +280,7 @@ class TestUsersApi(APITestCase):
         bad_token = f'{self.token}_bad'
         response = self.client.post(
             self.confirm_email_url(bad_token), data=json.dumps({}), content_type=self.CONTENT_TYPE)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, 400)
         self.assertIn('non_field_errors', response.json())
         self.assertEqual(response.json()['non_field_errors'], ["Error decoding signature."])
         self.assertFalse(User.objects.get(username=USER_VASCO['username']).email_confirmed)
@@ -289,9 +290,19 @@ class TestUsersApi(APITestCase):
 
         response = self.client.post(
             self.confirm_email_url(self.token), data=json.dumps({}), content_type=self.CONTENT_TYPE)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, 204)
 
         self.assertTrue(User.objects.get(username=USER_VASCO['username']).email_confirmed)
+
+    def test_me_401(self):
+        response = self.client.get(self.me_url())
+        self.assertEqual(response.status_code, 401)
+
+    def test_me_200(self):
+        response_me = self.client.get(self.me_url(), **self.http_auth)
+        self.assertEqual(response_me.status_code, 200)
+        response_id = self.client.get(self.instance_url(username=USER_VASCO['username']), **self.http_auth)
+        self.assertEqual(response_me.json(), response_id.json())
 
 
 class TestUsersTasks(TestCase):

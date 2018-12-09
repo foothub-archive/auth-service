@@ -1,6 +1,7 @@
 from django.http import Http404
 from rest_framework import mixins, viewsets, response, status, decorators, permissions
 from rest_framework_jwt.serializers import VerifyJSONWebTokenSerializer
+from rest_framework.response import Response
 
 from .models import User
 from .serializers import UserSerializer, ConfirmEmailSerializer
@@ -59,3 +60,9 @@ class UserViewSet(mixins.ListModelMixin,
         user.email_confirmed = True
         user.save()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
+
+    @decorators.action(methods=['get'], detail=False)
+    def me(self, request, *args, **kwargs):
+        instance = self.request.user
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
